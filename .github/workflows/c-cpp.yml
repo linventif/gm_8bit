@@ -10,7 +10,7 @@ jobs:
         runs-on: ubuntu-22.04
         steps:
             - name: Start build-linux
-              run: echo "🛠️  Lancement du build Linux..."
+              run: echo "🛠️  Lancement du build Linux sur Ubuntu 22.04"
 
             - name: Checkout main repo
               uses: actions/checkout@v2
@@ -47,13 +47,13 @@ jobs:
                   make
                   make config=releasewithsymbols_x86_64
 
-            - name: Upload artifacts Linux (x86)
+            - name: Upload artifact Linux x86
               uses: actions/upload-artifact@v4
               with:
                   name: gmsv_eightbit_linux.dll
                   path: projects/linux/gmake/x86/ReleaseWithSymbols/gmsv_eightbit_linux.dll
 
-            - name: Upload artifacts Linux (x86_64)
+            - name: Upload artifact Linux x86_64
               uses: actions/upload-artifact@v4
               with:
                   name: gmsv_eightbit_linux64.dll
@@ -94,7 +94,7 @@ jobs:
                     /p:Configuration=ReleaseWithSymbols `
                     /p:Platform=Win32 eightbit.sln
 
-            - name: Upload artifact Win32
+            - name: Upload artifact Windows x86
               uses: actions/upload-artifact@v4
               with:
                   name: gmsv_eightbit_windows.dll
@@ -107,7 +107,7 @@ jobs:
                     /p:Configuration=ReleaseWithSymbols `
                     /p:Platform=x64 eightbit.sln
 
-            - name: Upload artifact x64
+            - name: Upload artifact Windows x64
               uses: actions/upload-artifact@v4
               with:
                   name: gmsv_eightbit_win64.dll
@@ -123,7 +123,6 @@ jobs:
             - name: Download all build artifacts
               uses: actions/download-artifact@v4
               with:
-                  # sans `name`, télécharge tous les artefacts
                   path: release
 
             - name: Create GitHub Release
@@ -136,7 +135,7 @@ jobs:
                   release_name: Build ${{ github.run_number }}
                   body: |
                       🚀 Build automatisé  
-                      Artifacts pour Linux et Windows.
+                      Contient les DLL pour Linux & Windows.
                   draft: false
                   prerelease: false
 
