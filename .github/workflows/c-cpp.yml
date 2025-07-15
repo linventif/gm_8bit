@@ -2,14 +2,15 @@ name: Build
 
 on:
     push:
-        branches: [master]
+        branches:
+            - master
     workflow_dispatch:
 
 jobs:
     build-linux:
         runs-on: ubuntu-22.04
         steps:
-            - name: Start build-linux
+            - name: Start build‑linux
               run: echo "🛠️  Lancement du build Linux sur Ubuntu 22.04"
 
             - name: Checkout main repo
@@ -84,15 +85,13 @@ jobs:
                   "$Env:GITHUB_WORKSPACE\premake" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
 
             - name: Generate Project
-              run: |
-                  premake5.exe --gmcommon=garrysmod_common vs2022
+              run: premake5.exe --gmcommon=garrysmod_common vs2022
 
             - name: Build Win32
+              shell: pwsh
               run: |
                   cd projects/windows/vs2022
-                  & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe" `
-                    /p:Configuration=ReleaseWithSymbols `
-                    /p:Platform=Win32 eightbit.sln
+                  msbuild eightbit.sln /p:Configuration=ReleaseWithSymbols /p:Platform=Win32
 
             - name: Upload artifact Windows x86
               uses: actions/upload-artifact@v4
@@ -101,11 +100,10 @@ jobs:
                   path: projects/windows/vs2022/x86/ReleaseWithSymbols/gmsv_eightbit_win32.dll
 
             - name: Build x64
+              shell: pwsh
               run: |
                   cd projects/windows/vs2022
-                  & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe" `
-                    /p:Configuration=ReleaseWithSymbols `
-                    /p:Platform=x64 eightbit.sln
+                  msbuild eightbit.sln /p:Configuration=ReleaseWithSymbols /p:Platform=x64
 
             - name: Upload artifact Windows x64
               uses: actions/upload-artifact@v4
@@ -120,7 +118,6 @@ jobs:
             - build-windows
         runs-on: ubuntu-latest
         steps:
-            # 1) Télécharge chaque artefact dans son dossier :
             - name: Download Linux 32‑bit DLL
               uses: actions/download-artifact@v4
               with:
@@ -145,7 +142,6 @@ jobs:
                   name: gmsv_eightbit_win64.dll
                   path: release/win64
 
-            # 2) Crée la Release GitHub
             - name: Create GitHub Release
               id: create_release
               uses: actions/create-release@v1
@@ -160,7 +156,6 @@ jobs:
                   draft: false
                   prerelease: false
 
-            # 3) Upload => on descend d’un niveau supplémentaire pour cibler le .dll
             - name: Upload Linux 32‑bit DLL
               uses: actions/upload-release-asset@v1
               env:
