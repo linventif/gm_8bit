@@ -9,50 +9,69 @@ jobs:
     build-linux:
         runs-on: ubuntu-20.04
         steps:
-            - uses: actions/checkout@v2
-            - uses: actions/checkout@v2
+            - name: Start build-linux
+              run: echo "🛠️  Lancement du build Linux..."
+
+            - name: Checkout main repo
+              uses: actions/checkout@v2
+
+            - name: Checkout garrysmod_common submodule
+              uses: actions/checkout@v2
               with:
-                  submodules: recursive
                   repository: danielga/garrysmod_common
                   ref: x86-64-support-sourcesdk
-                  path: 'garrysmod_common'
-            - name: Install Premake
+                  submodules: recursive
+                  path: garrysmod_common
+
+            - name: Install Premake & dépendances
               run: |
+                  echo "📥  Téléchargement de Premake..."
                   wget https://github.com/premake/premake-core/releases/download/v5.0.0-beta2/premake-5.0.0-beta2-linux.tar.gz -O premake.tar.gz
-                  tar -xvf premake.tar.gz
+                  tar -xzf premake.tar.gz
                   chmod +x premake5
-                  sudo cp premake5 /usr/bin
+                  sudo mv premake5 /usr/local/bin/
+                  echo "🔧  Mise à jour des paquets..."
                   sudo apt-get update
-                  sudo apt-get install g++-multilib
+                  sudo apt-get install -y g++-multilib
                   gcc --version
-            - name: Generate Project
+
+            - name: Génération du projet avec Premake
               run: |
+                  echo "📐  Génération des makefiles..."
                   premake5 --gmcommon=garrysmod_common gmake
-            - name: Make
+
+            - name: Compilation Linux
               run: |
+                  echo "🏗️  Compilation..."
                   cd projects/linux/gmake
                   make
                   make config=releasewithsymbols_x86_64
-            - uses: actions/upload-artifact@v4
+
+            - name: Upload artifacts Linux (x86)
+              uses: actions/upload-artifact@v4
               with:
                   name: gmsv_eightbit_linux.dll
                   path: projects/linux/gmake/x86/ReleaseWithSymbols/gmsv_eightbit_linux.dll
-            - uses: actions/upload-artifact@v4
+
+            - name: Upload artifacts Linux (x86_64)
+              uses: actions/upload-artifact@v4
               with:
                   name: gmsv_eightbit_linux64.dll
                   path: projects/linux/gmake/x86_64/ReleaseWithSymbols/gmsv_eightbit_linux64.dll
 
     build-windows:
         runs-on: windows-2022
-
         steps:
-            - uses: actions/checkout@v2
-            - uses: actions/checkout@v2
+            - name: Checkout main repo
+              uses: actions/checkout@v2
+
+            - name: Checkout garrysmod_common submodule
+              uses: actions/checkout@v2
               with:
-                  submodules: recursive
                   repository: danielga/garrysmod_common
                   ref: x86-64-support-sourcesdk
-                  path: 'garrysmod_common'
+                  submodules: recursive
+                  path: garrysmod_common
 
             - name: Install Premake
               run: |
@@ -62,7 +81,6 @@ jobs:
             - name: Add Premake to PATH
               shell: pwsh
               run: |
-                  # On Windows, pour exporter un dossier dans le PATH, on écrit dans $GITHUB_PATH
                   "$Env:GITHUB_WORKSPACE\premake" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
 
             - name: Generate Project
@@ -72,9 +90,12 @@ jobs:
             - name: Build Win32
               run: |
                   cd projects/windows/vs2022
-                  & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe" /p:Configuration=ReleaseWithSymbols /p:Platform=Win32 eightbit.sln
+                  & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe" `
+                    /p:Configuration=ReleaseWithSymbols `
+                    /p:Platform=Win32 eightbit.sln
 
-            - uses: actions/upload-artifact@v4
+            - name: Upload artifact Win32
+              uses: actions/upload-artifact@v4
               with:
                   name: gmsv_eightbit_windows.dll
                   path: projects/windows/vs2022/x86/ReleaseWithSymbols/gmsv_eightbit_win32.dll
@@ -82,9 +103,12 @@ jobs:
             - name: Build x64
               run: |
                   cd projects/windows/vs2022
-                  & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe" /p:Configuration=ReleaseWithSymbols /p:Platform=x64 eightbit.sln
+                  & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe" `
+                    /p:Configuration=ReleaseWithSymbols `
+                    /p:Platform=x64 eightbit.sln
 
-            - uses: actions/upload-artifact@v4
+            - name: Upload artifact x64
+              uses: actions/upload-artifact@v4
               with:
                   name: gmsv_eightbit_win64.dll
                   path: projects/windows/vs2022/x86_64/ReleaseWithSymbols/gmsv_eightbit_win64.dll
