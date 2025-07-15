@@ -120,11 +120,32 @@ jobs:
             - build-windows
         runs-on: ubuntu-latest
         steps:
-            - name: Download all build artifacts
+            # Téléchargement des artefacts un par un dans des sous‑dossiers
+            - name: Download Linux 32‑bit DLL
               uses: actions/download-artifact@v4
               with:
-                  path: release
+                  name: gmsv_eightbit_linux.dll
+                  path: release/linux32
 
+            - name: Download Linux 64‑bit DLL
+              uses: actions/download-artifact@v4
+              with:
+                  name: gmsv_eightbit_linux64.dll
+                  path: release/linux64
+
+            - name: Download Windows 32‑bit DLL
+              uses: actions/download-artifact@v4
+              with:
+                  name: gmsv_eightbit_windows.dll
+                  path: release/win32
+
+            - name: Download Windows 64‑bit DLL
+              uses: actions/download-artifact@v4
+              with:
+                  name: gmsv_eightbit_win64.dll
+                  path: release/win64
+
+            # Création de la Release GitHub
             - name: Create GitHub Release
               id: create_release
               uses: actions/create-release@v1
@@ -139,13 +160,14 @@ jobs:
                   draft: false
                   prerelease: false
 
+            # Upload des DLL dans la Release
             - name: Upload Linux 32‑bit DLL
               uses: actions/upload-release-asset@v1
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: release/gmsv_eightbit_linux.dll
+                  asset_path: release/linux32/gmsv_eightbit_linux.dll
                   asset_name: gmsv_eightbit_linux.dll
                   asset_content_type: application/octet-stream
 
@@ -155,7 +177,7 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: release/gmsv_eightbit_linux64.dll
+                  asset_path: release/linux64/gmsv_eightbit_linux64.dll
                   asset_name: gmsv_eightbit_linux64.dll
                   asset_content_type: application/octet-stream
 
@@ -165,7 +187,7 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: release/gmsv_eightbit_windows.dll
+                  asset_path: release/win32/gmsv_eightbit_windows.dll
                   asset_name: gmsv_eightbit_windows.dll
                   asset_content_type: application/octet-stream
 
@@ -175,6 +197,6 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: release/gmsv_eightbit_win64.dll
+                  asset_path: release/win64/gmsv_eightbit_win64.dll
                   asset_name: gmsv_eightbit_win64.dll
                   asset_content_type: application/octet-stream
