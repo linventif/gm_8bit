@@ -112,3 +112,70 @@ jobs:
               with:
                   name: gmsv_eightbit_win64.dll
                   path: projects/windows/vs2022/x86_64/ReleaseWithSymbols/gmsv_eightbit_win64.dll
+
+    release:
+        name: Publish Release
+        needs:
+            - build-linux
+            - build-windows
+        runs-on: ubuntu-latest
+        steps:
+            - name: Download all build artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  # sans `name`, télécharge tous les artefacts
+                  path: release
+
+            - name: Create GitHub Release
+              id: create_release
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: v${{ github.run_number }}
+                  release_name: Build ${{ github.run_number }}
+                  body: |
+                      🚀 Build automatisé  
+                      Artifacts pour Linux et Windows.
+                  draft: false
+                  prerelease: false
+
+            - name: Upload Linux 32‑bit DLL
+              uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ steps.create_release.outputs.upload_url }}
+                  asset_path: release/gmsv_eightbit_linux.dll
+                  asset_name: gmsv_eightbit_linux.dll
+                  asset_content_type: application/octet-stream
+
+            - name: Upload Linux 64‑bit DLL
+              uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ steps.create_release.outputs.upload_url }}
+                  asset_path: release/gmsv_eightbit_linux64.dll
+                  asset_name: gmsv_eightbit_linux64.dll
+                  asset_content_type: application/octet-stream
+
+            - name: Upload Windows 32‑bit DLL
+              uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ steps.create_release.outputs.upload_url }}
+                  asset_path: release/gmsv_eightbit_windows.dll
+                  asset_name: gmsv_eightbit_windows.dll
+                  asset_content_type: application/octet-stream
+
+            - name: Upload Windows 64‑bit DLL
+              uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ steps.create_release.outputs.upload_url }}
+                  asset_path: release/gmsv_eightbit_win64.dll
+                  asset_name: gmsv_eightbit_win64.dll
+                  asset_content_type: application/octet-stream
