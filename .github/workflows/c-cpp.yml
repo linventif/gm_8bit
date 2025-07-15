@@ -43,7 +43,6 @@ jobs:
                   path: projects/linux/gmake/x86_64/ReleaseWithSymbols/gmsv_eightbit_linux64.dll
 
     build-windows:
-        # Passage à l'image Windows Server 2022 (windows-latest pointe aussi sur 2022)
         runs-on: windows-2022
 
         steps:
@@ -59,18 +58,21 @@ jobs:
               run: |
                   curl -L https://github.com/premake/premake-core/releases/download/v5.0.0-beta2/premake-5.0.0-beta2-windows.zip -o premake.zip
                   Expand-Archive premake.zip -DestinationPath premake
-                  # Ajout au PATH pour pouvoir appeler premake5.exe depuis n'importe où
-                  echo "::add-path::${{ runner.workspace }}\premake"
+
+            - name: Add Premake to PATH
+              shell: pwsh
+              run: |
+                  # On Windows, pour exporter un dossier dans le PATH, on écrit dans $GITHUB_PATH
+                  "$Env:GITHUB_WORKSPACE\premake" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
 
             - name: Generate Project
-              # Génération du projet pour Visual Studio 2022
               run: |
                   premake5.exe --gmcommon=garrysmod_common vs2022
 
             - name: Build Win32
               run: |
                   cd projects/windows/vs2022
-                  & "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe" /p:Configuration=ReleaseWithSymbols /p:Platform=Win32 eightbit.sln
+                  & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe" /p:Configuration=ReleaseWithSymbols /p:Platform=Win32 eightbit.sln
 
             - uses: actions/upload-artifact@v4
               with:
@@ -80,7 +82,7 @@ jobs:
             - name: Build x64
               run: |
                   cd projects/windows/vs2022
-                  & "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe" /p:Configuration=ReleaseWithSymbols /p:Platform=x64 eightbit.sln
+                  & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe" /p:Configuration=ReleaseWithSymbols /p:Platform=x64 eightbit.sln
 
             - uses: actions/upload-artifact@v4
               with:
