@@ -81,7 +81,6 @@ void hook_BroadcastVoiceData(IClient* cl, uint nBytes, char* data, int64 xuid) {
 	//Check if the player is in the set of enabled players.
 	//This is (and needs to be) and O(1) operation for how often this function is called.
 	//If not in the set, just hit the trampoline to ensure default behavior.
-	int id = cl->GetUserID();
 
 #ifdef THIRDPARTY_LINK
 	if(checkIfMuted(cl->GetPlayerSlot()+1)) {
@@ -224,13 +223,7 @@ LUA_FUNCTION_STATIC(eightbit_enableEffect) {
 static std::thread timeoutThread;
 static std::atomic<bool> shouldStop(false);
 
-void TimeoutWorker() {
-    while (!shouldStop.load()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Vérifier toutes les 500ms
-        CheckVoiceTimeouts();
-    }
-}
-
+// Déclaration de la fonction avant son utilisation
 void CheckVoiceTimeouts() {
     auto now = std::chrono::steady_clock::now();
     auto timeout = std::chrono::milliseconds(1000); // 1 second timeout
@@ -261,6 +254,13 @@ void CheckVoiceTimeouts() {
         } else {
             ++it;
         }
+    }
+}
+
+void TimeoutWorker() {
+    while (!shouldStop.load()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Vérifier toutes les 500ms
+        CheckVoiceTimeouts();
     }
 }
 
@@ -326,6 +326,10 @@ GMOD_MODULE_OPEN()
 
 		LUA->PushString("SetBroadcastPort");
 		LUA->PushCFunction(eightbit_setbroadcastport);
+		LUA->SetTable(-3);
+
+		LUA->PushString("CheckVoiceTimeouts");
+		LUA->PushCFunction(eightbit_check_voice_timeouts);
 		LUA->SetTable(-3);
 
 		LUA->PushString("EFF_NONE");
