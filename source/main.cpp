@@ -16,6 +16,8 @@
 #include <GarrysMod/Symbol.hpp>
 #include <cstdint>
 #include "opus_framedecoder.h"
+#include <chrono>
+#include <unordered_set>
 
 #define STEAM_PCKT_SZ sizeof(uint64_t) + sizeof(CRC32_t)
 #ifdef SYSTEM_WINDOWS
@@ -46,14 +48,38 @@ static char recompressBuffer[20 * 1024];
 Net* net_handl = nullptr;
 EightbitState* g_eightbit = nullptr;
 
+static std::unordered_set<int> currentlySpeaking;
+static std::unordered_map<int, std::chrono::steady_clock::time_point> lastVoiceActivity;
+
 typedef void (*SV_BroadcastVoiceData)(IClient* cl, int nBytes, char* data, int64 xuid);
 Detouring::Hook detour_BroadcastVoiceData;
 
 void hook_BroadcastVoiceData(IClient* cl, uint nBytes, char* data, int64 xuid) {
+	int uid = cl->GetUserID();
+	auto now = std::chrono::steady_clock::now();
+
+	// Update last activity time
+	lastVoiceActivity[uid] = now;
+
+	// Check if this is a new speaker (START event)
+	if (currentlySpeaking.find(uid) == currentlySpeaking.end()) {
+		currentlySpeaking.insert(uid);
+		std::cout << "[EightBit] User " << uid << " START speaking" << std::endl;
+
+		// You can call a Lua hook here:
+		// LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+		// LUA->GetField(-1, "hook");
+		// LUA->GetField(-1, "Run");
+		// LUA->PushString("EightBit_PlayerStartSpeaking");
+		// LUA->PushNumber(uid);
+		// LUA->Call(2, 0);
+		// LUA->Pop(2);
+	}
+
 	//Check if the player is in the set of enabled players.
 	//This is (and needs to be) and O(1) operation for how often this function is called.
 	//If not in the set, just hit the trampoline to ensure default behavior.
-	int uid = cl->GetUserID();
+	int id = cl->GetUserID();
 
 #ifdef THIRDPARTY_LINK
 	if(checkIfMuted(cl->GetPlayerSlot()+1)) {
@@ -193,6 +219,43 @@ LUA_FUNCTION_STATIC(eightbit_enableEffect) {
 	return 0;
 }
 
+void CheckVoiceTimeouts() {
+    auto now = std::chrono::steady_clock::now();
+    auto timeout = std::chrono::milliseconds(1000); // 1 second timeout
+
+    for (auto it = currentlySpeaking.begin(); it != currentlySpeaking.end();) {
+        int uid = *it;
+
+        if (lastVoiceActivity.find(uid) != lastVoiceActivity.end()) {
+            auto lastActivity = lastVoiceActivity[uid];
+
+            if (now - lastActivity > timeout) {
+                std::cout << "[EightBit] User " << uid << " STOP speaking" << std::endl;
+
+                // You can call a Lua hook here:
+                // LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+                // LUA->GetField(-1, "hook");
+                // LUA->GetField(-1, "Run");
+                // LUA->PushString("EightBit_PlayerStopSpeaking");
+                // LUA->PushNumber(uid);
+                // LUA->Call(2, 0);
+                // LUA->Pop(2);
+
+                it = currentlySpeaking.erase(it);
+                lastVoiceActivity.erase(uid);
+            } else {
+                ++it;
+            }
+        } else {
+            ++it;
+        }
+    }
+}
+
+LUA_FUNCTION_STATIC(eightbit_check_voice_timeouts) {
+    CheckVoiceTimeouts();
+    return 0;
+}
 
 GMOD_MODULE_OPEN()
 {
