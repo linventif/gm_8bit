@@ -6,6 +6,7 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+#include <filesystem>
 
 namespace AudioEffects {
 	enum {
@@ -56,12 +57,17 @@ namespace AudioEffects {
 			auto time_t = std::chrono::system_clock::to_time_t(now);
 			
 			std::stringstream ss;
-			ss << "recordings/user_" << userID << "_" 
+			ss << "garrysmod/recordings/user_" << userID << "_" 
 			   << std::put_time(std::localtime(&time_t), "%Y%m%d_%H%M%S") << ".wav";
 			filename = ss.str();
 			
-			// Créer le dossier recordings s'il n'existe pas
-			system("mkdir -p recordings");
+			// Créer le dossier garrysmod/recordings s'il n'existe pas (cross-platform)
+			try {
+				std::filesystem::create_directories("garrysmod/recordings");
+			} catch (const std::exception& e) {
+				std::cout << "[EightBit] Error creating directory: " << e.what() << std::endl;
+				return false;
+			}
 			
 			file.open(filename, std::ios::binary);
 			if (!file.is_open()) {
@@ -94,7 +100,10 @@ namespace AudioEffects {
 				
 				file.close();
 				samplesWritten = 0;
-				std::cout << "[EightBit] WAV file saved: " << filename << std::endl;
+				
+				// Get absolute path for better logging
+				std::filesystem::path absPath = std::filesystem::absolute(filename);
+				std::cout << "[EightBit] WAV file saved: " << absPath.string() << std::endl;
 			}
 		}
 		
