@@ -14,10 +14,10 @@ jobs:
               run: echo "🛠️  Lancement du build Linux sur Ubuntu 22.04"
 
             - name: Checkout main repo
-              uses: actions/checkout@v2
+              uses: actions/checkout@v4
 
             - name: Checkout garrysmod_common submodule
-              uses: actions/checkout@v2
+              uses: actions/checkout@v4
               with:
                   repository: danielga/garrysmod_common
                   ref: x86-64-support-sourcesdk
@@ -64,10 +64,10 @@ jobs:
         runs-on: windows-2022
         steps:
             - name: Checkout main repo
-              uses: actions/checkout@v2
+              uses: actions/checkout@v4
 
             - name: Checkout garrysmod_common submodule
-              uses: actions/checkout@v2
+              uses: actions/checkout@v4
               with:
                   repository: danielga/garrysmod_common
                   ref: x86-64-support-sourcesdk
@@ -159,42 +159,14 @@ jobs:
                   draft: false
                   prerelease: false
 
-            - name: Upload Linux 32‑bit DLL
-              uses: actions/upload-release-asset@v1
+            - name: Upload Release Assets
+              uses: softprops/action-gh-release@v1
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
-                  upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: release/linux32/gmsv_eightbit_linux.dll/gmsv_eightbit_linux.dll
-                  asset_name: gmsv_eightbit_linux.dll
-                  asset_content_type: application/octet-stream
-
-            - name: Upload Linux 64‑bit DLL
-              uses: actions/upload-release-asset@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: release/linux64/gmsv_eightbit_linux64.dll/gmsv_eightbit_linux64.dll
-                  asset_name: gmsv_eightbit_linux64.dll
-                  asset_content_type: application/octet-stream
-
-            - name: Upload Windows 32‑bit DLL
-              uses: actions/upload-release-asset@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: release/win32/gmsv_eightbit_windows.dll/gmsv_eightbit_windows.dll
-                  asset_name: gmsv_eightbit_windows.dll
-                  asset_content_type: application/octet-stream
-
-            - name: Upload Windows 64‑bit DLL
-              uses: actions/upload-release-asset@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: release/win64/gmsv_eightbit_win64.dll/gmsv_eightbit_win64.dll
-                  asset_name: gmsv_eightbit_win64.dll
-                  asset_content_type: application/octet-stream
+                  tag_name: v${{ github.run_number }}
+                  files: |
+                      release/linux32/gmsv_eightbit_linux.dll
+                      release/linux64/gmsv_eightbit_linux64.dll
+                      release/win32/gmsv_eightbit_windows.dll
+                      release/win64/gmsv_eightbit_win64.dll
