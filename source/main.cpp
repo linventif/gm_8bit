@@ -18,6 +18,8 @@
 #include "opus_framedecoder.h"
 #include <chrono>
 #include <unordered_set>
+#include <thread>
+#include <atomic>
 
 #define STEAM_PCKT_SZ sizeof(uint64_t) + sizeof(CRC32_t)
 #ifdef SYSTEM_WINDOWS
@@ -219,6 +221,16 @@ LUA_FUNCTION_STATIC(eightbit_enableEffect) {
 	return 0;
 }
 
+static std::thread timeoutThread;
+static std::atomic<bool> shouldStop(false);
+
+void TimeoutWorker() {
+    while (!shouldStop.load()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Vérifier toutes les 500ms
+        CheckVoiceTimeouts();
+    }
+}
+
 void CheckVoiceTimeouts() {
     auto now = std::chrono::steady_clock::now();
     auto timeout = std::chrono::milliseconds(1000); // 1 second timeout
@@ -336,11 +348,21 @@ GMOD_MODULE_OPEN()
 	linkMutedFunc();
 #endif
 
+	// Démarrer le thread de surveillance
+	shouldStop.store(false);
+	timeoutThread = std::thread(TimeoutWorker);
+
 	return 0;
 }
 
 GMOD_MODULE_CLOSE()
 {
+    // Arrêter le thread de surveillance
+    shouldStop.store(true);
+    if (timeoutThread.joinable()) {
+        timeoutThread.join();
+    }
+
 	detour_BroadcastVoiceData.Disable();
 	detour_BroadcastVoiceData.Destroy();
 
