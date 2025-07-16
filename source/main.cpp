@@ -20,6 +20,7 @@
 #include <unordered_set>
 #include <thread>
 #include <atomic>
+#include <memory>
 
 #define STEAM_PCKT_SZ sizeof(uint64_t) + sizeof(CRC32_t)
 #ifdef SYSTEM_WINDOWS
@@ -52,6 +53,7 @@ EightbitState* g_eightbit = nullptr;
 
 static std::unordered_set<int> currentlySpeaking;
 static std::unordered_map<int, std::chrono::steady_clock::time_point> lastVoiceActivity;
+static std::unordered_map<int, std::unique_ptr<AudioEffects::VoiceRecorder>> voiceRecorders;
 
 typedef void (*SV_BroadcastVoiceData)(IClient* cl, int nBytes, char* data, int64 xuid);
 Detouring::Hook detour_BroadcastVoiceData;
@@ -67,6 +69,12 @@ void hook_BroadcastVoiceData(IClient* cl, uint nBytes, char* data, int64 xuid) {
 	if (currentlySpeaking.find(uid) == currentlySpeaking.end()) {
 		currentlySpeaking.insert(uid);
 		std::cout << "[EightBit] User " << uid << " START speaking" << std::endl;
+		
+		// Démarrer l'enregistrement WAV
+		voiceRecorders[uid] = std::make_unique<AudioEffects::VoiceRecorder>();
+		if (voiceRecorders[uid]->startRecording(uid)) {
+			std::cout << "[EightBit] Started recording for user " << uid << std::endl;
+		}
 
 		// You can call a Lua hook here:
 		// LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
@@ -76,6 +84,18 @@ void hook_BroadcastVoiceData(IClient* cl, uint nBytes, char* data, int64 xuid) {
 		// LUA->PushNumber(uid);
 		// LUA->Call(2, 0);
 		// LUA->Pop(2);
+	}
+	
+	// Enregistrer les données audio décompressées
+	if (voiceRecorders.find(uid) != voiceRecorders.end() && nBytes > STEAM_PCKT_SZ) {
+		// Créer un codec temporaire pour décompresser les données
+		SteamOpus::Opus_FrameDecoder tempCodec;
+		int bytesDecompressed = SteamVoice::DecompressIntoBuffer(&tempCodec, data, nBytes, decompressedBuffer, sizeof(decompressedBuffer));
+		
+		if (bytesDecompressed > 0) {
+			int samples = bytesDecompressed / 2;
+			voiceRecorders[uid]->writeAudioData((const int16_t*)decompressedBuffer, samples);
+		}
 	}
 
 	//Check if the player is in the set of enabled players.
@@ -236,6 +256,12 @@ void CheckVoiceTimeouts() {
 
             if (now - lastActivity > timeout) {
                 std::cout << "[EightBit] User " << uid << " STOP speaking" << std::endl;
+                
+                // Arrêter l'enregistrement WAV
+                if (voiceRecorders.find(uid) != voiceRecorders.end()) {
+                    voiceRecorders[uid]->stopRecording();
+                    voiceRecorders.erase(uid);
+                }
 
                 // You can call a Lua hook here:
                 // LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
@@ -366,6 +392,12 @@ GMOD_MODULE_CLOSE()
     if (timeoutThread.joinable()) {
         timeoutThread.join();
     }
+
+    // Arrêter tous les enregistrements en cours
+    for (auto& pair : voiceRecorders) {
+        pair.second->stopRecording();
+    }
+    voiceRecorders.clear();
 
 	detour_BroadcastVoiceData.Disable();
 	detour_BroadcastVoiceData.Destroy();
